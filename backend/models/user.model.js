@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         minlength: 8,
+        select:false,
         validate: {
             validator: function (password) {
                 // At least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
@@ -33,19 +34,21 @@ const userSchema = new mongoose.Schema({
         required: true,
     },
 });
-userSchema.static.hashPassword = async function (password) {
+userSchema.statics.hashPassword = async function (password) {
     return await bcrypt.hash(password, 10);
 };
 
-userSchema.methods.generateAuthToken = function () {
+userSchema.statics.generateAuthToken = function () {
     const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET, {
         expiresIn: "24h",
     });
     return token;
 };
-
 userSchema.methods.isPasswordCorrect = async function (password) {
-    const password = await bcrypt.compare(password, this.password);
+    return await bcrypt.compare(password, this.password);
 };
 
+
 const User = mongoose.model("User", userSchema);
+
+export default User;
