@@ -18,7 +18,31 @@ export const registerUser = async (req, res) => {
 
     try {
         const validatedData = userSchema.parse(req.body);
-        // Continue with registration using validatedData...
+        const { name, email, password } = validatedData;
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(401).send("user already exists , please login");
+        }
+
+        const hashPass = await User.hashPassword(password);
+
+        const newUser = new User({
+            name: {
+                firstName: name.firstName,
+                lastName: name.lastName || "",
+            },
+            email,
+            password: hashPass,
+        });
+
+        if (!newUser) {
+            return res
+                .status(400)
+                .json({ message: "Something went wrong while signup" });
+        }
+        await newUser.save();
+        res.status(200).json({ message: "user register successfully" });
     } catch (error) {
         if (error instanceof z.ZodError) {
             return res.status(400).json({
@@ -31,32 +55,6 @@ export const registerUser = async (req, res) => {
             });
         }
     }
-
-    const { name, email, password } = validatedData;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        return res.status(401).send("user already exists , please login");
-    }
-
-    const hashPass = await User.hashPassword(password);
-
-    const newUser = new User({
-        name: {
-            firstName: name.firstName,
-            lastName: name.lastName || "",
-        },
-        email,
-        password: hashPass,
-    });
-
-    if (!newUser) {
-        return res
-            .status(400)
-            .json({ message: "Something went wrong while signup" });
-    }
-    await newUser.save();
-    res.status(200).json({ message: "user register successfully" });
 };
 
 export const loginUser = async (req, res) => {
@@ -72,7 +70,69 @@ export const loginUser = async (req, res) => {
     });
     try {
         const validatedData = userSchema.parse(req.body);
-        // Continue with registration using validatedData...
+
+        const { email, password } = validatedData;
+        // Check if user already has a valid token
+
+
+        console.log("level 1 completed");
+
+        const user = await User.findOne({ email }).select("+password");
+        if (!user) {
+            console.log("user not found");
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        console.log("level 2 completed");
+
+        const Token = await User.generateAuthToken(); // This works because generateAuthToken is a static method
+        // Static methods are called on the Model class (User) rather than model instances
+        // If it was an instance method, we would need a specific user instance to call it on
+        // Since we're generating a token without a specific user context, it makes sense as a static method
+
+        console.log(Token);
+
+        if (!Token) {
+            console.log("token not found ");
+            return res.status(400).json({
+                success: false,
+                message: "Token generation failed",
+            });
+        }
+
+        console.log("level 3 completed");
+
+        const isPasswordCorrect = await user.isPasswordCorrect(password);
+        if (!isPasswordCorrect) {
+            console.log("password is not correct");
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials",
+            });
+        }
+        console.log("level 4 completed");
+
+        // Create a user object without sensitive information
+        const userWithoutPassword = {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+        };
+
+        res.cookie("token", Token, {
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        });
+
+        res.status(200).json({
+            success: true,
+            user: userWithoutPassword,
+            Token,
+            message: "User logged in successfully",
+        });
     } catch (error) {
         if (error instanceof z.ZodError) {
             return res.status(400).json({
@@ -85,54 +145,13 @@ export const loginUser = async (req, res) => {
             });
         }
     }
-    const { email, password } = validatedData;
-
-    const token = await User.generateAuthToken();
-    console.log(token);
-
-    if (!token) {
-        console.log("token not found ");
-        return res.status(400).json({
-            success: false,
-            message: "Token generation failed",
-        });
-    }
-
-    const user = await User.find({ email });
-    if (!user) {
-        console.log("user not found");
-        return res.status(404).json({
-            success: false,
-            message: "User not found",
-        });
-    }
-
-    const isPasswordCorrect = await User.isPasswordCorrect(password);
-    if (!isPasswordCorrect) {
-        console.log("password is not correct");
-        return res.status(401).json({
-            success: false,
-            message: "Invalid credentials",
-        });
-    }
-
-    res.cookie("token", token, {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    });
-
-    res.status(200).json({
-        success: true,
-        user,
-        message: "User logged in successfully",
-    });
 };
 
 export const logout = async (req, res) => {
-    const token = req.cookie;
+    const token = req.cookies.token;
     if (!token) {
         console.log("token not found ");
-        res.status(404).json({ message: "user already logged out" });
+        res.status(404).json({ message: "No user active currently " });
     }
 
     res.clearCookie("token");
