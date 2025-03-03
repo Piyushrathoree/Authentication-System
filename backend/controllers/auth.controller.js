@@ -40,7 +40,7 @@ export const registerUser = async (req, res) => {
             return res
                 .status(400)
                 .json({ message: "Something went wrong while signup" });
-        }
+        }   
         await newUser.save();
         res.status(200).json({ message: "user register successfully" });
     } catch (error) {
@@ -73,7 +73,6 @@ export const loginUser = async (req, res) => {
 
         const { email, password } = validatedData;
         // Check if user already has a valid token
-
 
         console.log("level 1 completed");
 
