@@ -1,23 +1,22 @@
-import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
-export const isAuthenticated = async (req, res, next) => {
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+export const isAuthenticated = (req, res, next) => {
+    
+    // ✅ 2. Check if JWT token exists in cookies
+    const token = req.cookies?.["connect.sid"] || req.cookies?.token; // ✅ Handle both session & JWT token
+    console.log("Token Received:", token);
 
     if (!token) {
-        return res.status(401).json({
-            success: false,
-            message: "Unauthorized - No token provided",
-        });
+        return res
+            .status(401)
+            .json({ message: "Unauthorized: No token found" });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
+        req.user = { id: decoded._id, email: decoded.email }; // ✅ Attach user to request
+        next(); // ✅ Allow access
     } catch (error) {
-        return res.status(401).json({
-            success: false,
-            message: "Unauthorized - Invalid token",
-        });
+        return res.status(401).json({ message: "Unauthorized: Invalid token" });
     }
 };

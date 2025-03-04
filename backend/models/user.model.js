@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+
 const userSchema = new mongoose.Schema({
     name: {
         firstName: {
             type: String,
-            required: true,
+            
         },
         lastName: {
             type: String,
@@ -20,7 +21,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         minlength: 8,
-        select:false,
+        select: false,
         validate: {
             validator: function (password) {
                 // At least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
@@ -31,8 +32,16 @@ const userSchema = new mongoose.Schema({
             message:
                 "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character",
         },
-        required: true,
+       
     },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
+    avatar:{
+        type:String
+    }
 });
 userSchema.statics.hashPassword = async function (password) {
     return await bcrypt.hash(password, 10);
@@ -47,7 +56,6 @@ userSchema.statics.generateAuthToken = function () {
 userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password);
 };
-
 
 const User = mongoose.model("User", userSchema);
 
