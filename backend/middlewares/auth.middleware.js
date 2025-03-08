@@ -1,10 +1,9 @@
 import jwt from "jsonwebtoken";
+import User from "../models/user.model";
 
-export const isAuthenticated = (req, res, next) => {
+export const isAuthenticated = async(req, res, next) => {
     
-    // ✅ 2. Check if JWT token exists in cookies
-    const token = req.cookies?.["connect.sid"] || req.cookies?.token; // ✅ Handle both session & JWT token
-    console.log("Token Received:", token);
+   const token = req.cookies.token;
 
     if (!token) {
         return res
@@ -14,8 +13,9 @@ export const isAuthenticated = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = { id: decoded._id, email: decoded.email }; // ✅ Attach user to request
-        next(); // ✅ Allow access
+        const user = await User.find({ id: decoded._id, email: decoded.email })
+        req.user = user; 
+        next();
     } catch (error) {
         return res.status(401).json({ message: "Unauthorized: Invalid token" });
     }
