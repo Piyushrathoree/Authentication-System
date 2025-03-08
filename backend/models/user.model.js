@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
     name: {
         firstName: {
             type: String,
-            
+            required:true
         },
         lastName: {
             type: String,
@@ -32,16 +32,9 @@ const userSchema = new mongoose.Schema({
             message:
                 "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character",
         },
-       
+       required:true
     },
-    googleId: {
-        type: String,
-        unique: true,
-        sparse: true,
-    },
-    avatar:{
-        type:String
-    }
+    
 });
 userSchema.statics.hashPassword = async function (password) {
     return await bcrypt.hash(password, 10);

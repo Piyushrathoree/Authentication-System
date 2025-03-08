@@ -22,18 +22,18 @@ export const registerUser = async (req, res) => {
         const validatedData = userSchema.parse(req.body);
         const { name, email, password } = validatedData;
 
-        let user = await User.findOne({ email });
-        if (user)
+        let existingUser = await User.findOne({ email });
+        if (existingUser)
             return res.status(401).send("User already exists, please login");
 
-        user = new User({
+        const user = new User({
             name: { firstName: name.firstName, lastName: name.lastName || "" },
             email,
             password: await User.hashPassword(password),
         });
 
         await user.save();
-        res.status(200).json({ message: "User registered successfully" });
+        res.status(200).json({ message: "User registered successfully" } , user);
     } catch (error) {
         return res
             .status(400)
@@ -45,14 +45,12 @@ export const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email }).select("+password");
+        
         if (!user || !(await user.isPasswordCorrect(password))) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
-        const token = jwt.sign(
-            { _id: user._id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: "24h" }
-        );
+        const token = await User.generateAuthToken();
+        
         res.cookie("token", token, {
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000,
