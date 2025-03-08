@@ -1,6 +1,5 @@
 // ✅ AUTH CONTROLLER (SIGNUP, LOGIN, GOOGLE OAUTH)
 import User from "../models/user.model.js";
-import jwt from "jsonwebtoken";
 import { z } from "zod";
 
 export const registerUser = async (req, res) => {
